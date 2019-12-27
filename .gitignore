@@ -1,0 +1,5 @@
+.idea/
+_trial_temp/
+build/
+dist/
+pynetem.egg-info/
