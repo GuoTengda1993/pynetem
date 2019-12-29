@@ -12,6 +12,7 @@ api = Blueprint('pynetem', __name__)
 
 
 def tear_down():
+    brctl_delbr()
     for i in interfaces:
         del_qdisc_root(i)
 
@@ -152,6 +153,53 @@ def set_rules():
         else:
             status, msg = 'success', resp[1]
     return jsonify({'status': status, 'msg': msg})
+
+
+@api.route('/brctl/addbr', methods=['POST'])
+def add_bridge():
+    data = request.json
+    eths = data.get('interfaces', [])
+    stp = data.get('stp', 'on')
+    _eth_mark = False
+    if type(eths, list) and len(eths > 0):
+        _eth_mark = True
+        for each in eths:
+            if each not in interfaces:
+                status, msg = 'error', '{} is not exist in the host'.format(each)
+                return jsonify({'status': status, 'msg': msg})
+    resp = brctl_addbr(stp=stp)
+    if resp[0] == 'ERROR':
+        status, msg = 'error', resp[1]
+        return jsonify({'status': status, 'msg': msg})
+    res = dict()
+    if _eth_mark:
+        for each in eths:
+            m = brctl_addif(eth=each)
+            res[each] = m[0]
+    return jsonify({'status': 'success', 'msg': resp[1], 'res': res})
+
+
+@api.route('/brctl/delbr', methods=['GET', 'DELETE'])
+def del_bridge():
+    resp = brctl_delbr()
+    return jsonify({'status': resp[0].lower(), 'msg': resp[1]})
+
+
+@api.route('/brctl/addif', methods=['POST'])
+def add_if_to_br():
+    data = request.json
+    eths = data.get('interfaces', [])
+    if type(eths, list) and len(eths > 0):
+        _eth_mark = True
+        for each in eths:
+            if each not in interfaces:
+                status, msg = 'error', '{} is not exist in the host'.format(each)
+                return jsonify({'status': status, 'msg': msg})
+    res = dict()
+    for each in eths:
+        m = brctl_addif(eth=each)
+        res[each] = m[0]
+    return jsonify({'status': 'success', 'msg': '', 'res': res})
 
 
 def start(options):

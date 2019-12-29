@@ -16,15 +16,21 @@ It is recommended to use web mode, when you have several hosts to control, or yo
 
 Run in web mode: `pynetem --web`, default port is 8899, you can specify by yourself `pynetem --web --port=9090`
 
-There are five APIs:
+There are 8 APIs:
 ```
 [GET] /pynetem/help                                     -- Get demo post data and simple description
 [GET] /pynetem/listInterfaces                           -- Get interfaces name of host
 [GET] /pynetem/getRules?eht=<interface name>            -- Get qdisc rules by interface
 [GET/DELETE] /pynetem/clear?eth=<interface name>        -- Clear all rules
 [POST] /pynetem/setRules?eth=<interface name>           -- Set tc qdisc rule
+
+[POST] /pynetem/brctl/addbr                             -- Set bridge, the bridge name is pynetem_bridge by defaut
+[GET/DELETE] /pynetem/brctl/delbr                       -- Delete pynetem_bridge
+[POST] /pynetem/brctl/addif                             -- Add interface(s) to pynetem_bridge
 ```
-Post Body, if you set parameter `None` or `''`, the parameter will be ignored.:
+Post Body, if you set parameter `None` or `''`, the parameter will be ignored.
+
+`[POST] /pynetem/setRules?eth=<interface name>`
 ```json
 {
     "delay": "100ms 10ms 25%",
@@ -39,6 +45,25 @@ Post Body, if you set parameter `None` or `''`, the parameter will be ignored.:
     "dst": "10.10.10.0/24"
 }
 ```
+---
+`[POST] /pynetem/brctl/addbr`
+
+`stp` is "on" by default.
+```json
+{
+    "interfaces": ["eth0", "eth1"],
+    "stp": "on"
+}
+```
+---
+`[POST] /pynetem/brctl/addif`
+```json
+{
+    "interfaces": ["eth2"]
+}
+```
+
+---
 **ATTENTION!**
 
-When you press `ctrl + c` to stop the web server, **ALL qdisc rules in all interfaces** will be cleared automatically.
+When you press `ctrl + c` to stop the web server, **ALL qdisc rules in all interfaces AND the pynetem_bridge** will be cleared automatically.

@@ -22,6 +22,13 @@ _tc_traffic_rate_control = 'sudo tc qdisc add dev {ETH} parent 1:1 handle 10: tb
 _tc_qdisc_ls = 'sudo tc qdisc ls dev {ETH}'
 
 
+_brctl_addbr = 'sudo brctl addbr pynetem_bridge'
+_brctl_delbr = 'sudo brctl delbr pynetem_bridge'
+_brctl_addif = 'sudo brctl addif pynetem_bridge {ETH}'
+_brctl_delif = 'sudo brctl delif pynetem_bridge {ETH}'
+_btctl_stp = 'sudo brctl stp pynetem_bridge {STP}'
+
+
 def exec_command(command):
     _exec = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     info, err = _exec.communicate()
@@ -101,4 +108,28 @@ def add_qdisc_traffic(eth, rate, buffer=1600, limit=3000, cidr=None, **kwargs):
         msg = exec_command(c4)
         if msg[0] == 'ERROR':
             return msg
+    return msg
+
+
+def brctl_addbr(stp='on'):
+    exec_command(_brctl_delbr)
+    msg = exec_command(_brctl_addbr)
+    if msg[0] == 'ERROR':
+        return msg
+    msg = exec_command(_btctl_stp.format(STP=stp))
+    return msg
+
+
+def brctl_addif(eth):
+    msg = exec_command(_brctl_addif.format(ETH=eth))
+    return msg
+
+
+def brctl_delbr():
+    msg = exec_command(_brctl_delbr)
+    return msg
+
+
+def brctl_delif(eth):
+    msg = exec_command(_brctl_delif.format(ETH=eth))
     return msg
