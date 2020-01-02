@@ -121,6 +121,27 @@ def parse_options():
         help="default is 8899."
     )
 
+    parser.add_option(
+        '--host',
+        type='str',
+        dest='host',
+        help="The host IP"
+    )
+
+    parser.add_option(
+        '--username',
+        type='str',
+        dest='username',
+        help="The host username"
+    )
+
+    parser.add_option(
+        '--password',
+        type='str',
+        dest='password',
+        help="The host password"
+    )
+
     # Version number (optparse gives you --version but we have to do it
     # ourselves to get -V too. sigh)
     parser.add_option(
@@ -172,10 +193,28 @@ def main():
         logger.error('Cannot use "--dst" without "--rate"')
         sys.exit(1)
 
+    if options.host and not (options.username and options.password):
+        logger.error('Cannot use "--host" without "username" and "password"')
+        sys.exit(1)
+
+    if options.host and options.web:
+        logger.error('Cannot user "--host" and "--web" together.')
+        sys.exit(1)
+
     eth = options.interface
+    paramiko_mark = False
+    _host = None
+    _username = None
+    _password = None
+
+    if options.host:
+        _host = options.host
+        _username = options.username
+        _password = options.password
+        paramiko_mark = True
 
     if options.clear:
-        del_qdisc_root(eth=eth)
+        del_qdisc_root(eth=eth, paramiko_mark=paramiko_mark, host=_host, username=_username, password=_password, )
         sys.exit(0)
 
     netem = dict()
@@ -211,7 +250,7 @@ def main():
         limit = options.limit if options.limit else 3000
         cidr = options.dst if options.dst else None
         if cidr:
-            msg = add_qdisc_traffic(eth=eth, rate=rate, buffer=buffer, limit=limit, cidr=cidr, **netem)
+            msg = add_qdisc_traffic(eth=eth, rate=rate, buffer=buffer, limit=limit, cidr=cidr, paramiko_mark=paramiko_mark, host=_host, username=_username, password=_password, **netem)
             if msg[0] == 'ERROR':
                 logger.error(msg[1])
                 sys.exit(0)
@@ -219,7 +258,7 @@ def main():
                 logger.info(msg[1])
                 sys.exit(0)
         else:
-            msg = add_qdisc_rate_control(eth=eth, rate=rate, buffer=buffer, limit=limit, cidr=cidr, **netem)
+            msg = add_qdisc_rate_control(eth=eth, rate=rate, buffer=buffer, limit=limit, paramiko_mark=paramiko_mark, host=_host, username=_username, password=_password, **netem)
             if msg[0] == 'ERROR':
                 logger.error(msg[1])
                 sys.exit(0)
@@ -227,7 +266,7 @@ def main():
                 logger.info(msg[1])
                 sys.exit(0)
     else:
-        msg = add_qdisc_root(eth=eth, **netem)
+        msg = add_qdisc_root(eth=eth, paramiko_mark=paramiko_mark, host=_host, username=_username, password=_password, **netem)
         if msg[0] == 'ERROR':
             logger.error(msg[1])
             sys.exit(0)

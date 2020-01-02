@@ -42,7 +42,7 @@ setup(
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     include_package_data=True,
     zip_safe=False,
-    install_requires=["netifaces>=0.10.1", "flask>=1.0.0"],
+    install_requires=["netifaces>=0.10.0", "flask>=1.0.0", "paramiko>=1.7.0.0"],
     test_suite="",
     tests_require=[],
     entry_points={

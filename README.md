@@ -9,6 +9,13 @@ pip install pynetem
 ## How to Use It?
 In command mode, type `pynetem -h`, you will see help information, parameters in this tool is same as 'tc/netem'.
 
+If the host cannot download package from PyPI, you can use PyNetem (>=0.1.2) in your PC (no mater Windows or Linux) with the following parameters in addition:
+```bash
+--host          The host IP, which you will send command to
+--usrname       The username of host
+--password      The password of host
+```
+
 You can also use original command of `tc/netem`.
 For more information about `tc/netem`, you can click here: [netem](https://wiki.linuxfoundation.org/networking/netem)
 
@@ -20,7 +27,7 @@ There are 8 APIs:
 ```
 [GET] /pynetem/help                                     -- Get demo post data and simple description
 [GET] /pynetem/listInterfaces                           -- Get interfaces name of host
-[GET] /pynetem/getRules?eht=<interface name>            -- Get qdisc rules by interface
+[GET] /pynetem/getRules?eth=<interface name>            -- Get qdisc rules by interface
 [GET/DELETE] /pynetem/clear?eth=<interface name>        -- Clear all rules
 [POST] /pynetem/setRules?eth=<interface name>           -- Set tc qdisc rule
 
