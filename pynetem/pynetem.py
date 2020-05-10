@@ -2,6 +2,7 @@
 import logging
 import subprocess
 import paramiko
+from paramiko.ssh_exception import SSHException
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -31,33 +32,34 @@ _brctl_delif = 'sudo brctl delif pynetem_bridge {ETH}'
 _btctl_stp = 'sudo brctl stp pynetem_bridge {STP}'
 
 
-class ConnectHost:
+class SSHAgent:
 
-    def __init__(self, ip, username, password):
+    def __init__(self, ip, username, password, port=22):
         self.ip = ip
         self.username = username
         self.password = password
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.ssh.connect(hostname=self.ip, port=port, username=self.username, password=self.password)
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.ssh.close()
 
     def remote_command(self, command):
-        try:
-            self.ssh.connect(hostname=self.ip, port=22, username=self.username, password=self.password)
-        except Exception as e:
-            logger.error('Connected ERROR: {}'.format(e))
-            return 0
         stdin, stdout, stderr = self.ssh.exec_command(command)
         logger.info('Send command - {ip}: {command}'.format(ip=self.ip, command=command))
-        error = stderr.read()
-        self.ssh.close()
+        error = stderr.read().decode('utf-8')
         if error:
-            return 'ERROR', stdout.read()
+            return 'ERROR', error
         else:
-            return 'SUCCESS', stdout.read()
+            return 'SUCCESS', stdout.read().decode('utf-8')
 
 
-def exec_command(command, paramiko_mark=False, host=None, username=None, password=None):
-    if not paramiko_mark:
+def exec_command(command, remote_ssh=False, host=None, username=None, password=None):
+    if not remote_ssh:
         _exec = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         info, err = _exec.communicate()
         if err:
@@ -65,64 +67,69 @@ def exec_command(command, paramiko_mark=False, host=None, username=None, passwor
         else:
             return 'SUCCESS', info.decode('utf-8')
     else:
-        para = ConnectHost(ip=host, username=username, password=password)
-        return para.remote_command(command)
+        try:
+            ssh = SSHAgent(ip=host, username=username, password=password)
+            with ssh:
+                output = ssh.remote_command(command)
+        except SSHException as e:
+            output = 'ERROR', e
+        return output
 
 
-def get_qdisc_ls(eth, paramiko_mark=False, host=None, username=None, password=None):
+def get_qdisc_ls(eth, remote_ssh=False, host=None, username=None, password=None):
     command = _tc_qdisc_ls.format(ETH=eth)
-    msg = exec_command(command, paramiko_mark, host, username, password)
+    msg = exec_command(command, remote_ssh, host, username, password)
     return msg
 
 
-def del_qdisc_root(eth, paramiko_mark=False, host=None, username=None, password=None):
+def del_qdisc_root(eth, remote_ssh=False, host=None, username=None, password=None):
     command = _tc_del_qdisc_root.format(ETH=eth)
-    msg = exec_command(command, paramiko_mark, host, username, password)
+    msg = exec_command(command, remote_ssh, host, username, password)
     return msg
 
 
-def add_qdisc_root(eth, paramiko_mark=False, host=None, username=None, password=None, **kwargs):
-    del_qdisc_root(eth, paramiko_mark, host, username, password)
+def add_qdisc_root(eth, remote_ssh=False, host=None, username=None, password=None, **kwargs):
+    del_qdisc_root(eth, remote_ssh, host, username, password)
     command = _tc_add_qdisc_root_netem.format(ETH=eth)
     for each in kwargs:
         if kwargs[each]:
             if kwargs[each].strip() != '':
                 command = ' '.join([command, each, kwargs[each]])
-    msg = exec_command(command, paramiko_mark, host, username, password)
+    msg = exec_command(command, remote_ssh, host, username, password)
     return msg
 
 
-def add_qdisc_rate_control(eth, rate, buffer=1600, limit=3000, paramiko_mark=False, host=None, username=None, password=None, **kwargs):
+def add_qdisc_rate_control(eth, rate, buffer=1600, limit=3000, remote_ssh=False, host=None, username=None, password=None, **kwargs):
     buffer = 1600 if buffer is None else buffer
     limit = 3000 if limit is None else limit
-    del_qdisc_root(eth, paramiko_mark, host, username, password)
+    del_qdisc_root(eth, remote_ssh, host, username, password)
     if len(kwargs) != 0:
         c1 = _tc_traffic_rate_netem.format(ETH=eth)
         for each in kwargs:
             if kwargs[each]:
                 if kwargs[each].strip() != '':
                     c1 = ' '.join([c1, each, kwargs[each]])
-        msg = exec_command(c1, paramiko_mark, host, username, password)
+        msg = exec_command(c1, remote_ssh, host, username, password)
         if msg[0] == 'ERROR':
             return msg
         c2 = _tc_traffic_rate_control.format(ETH=eth, RATE=rate, BUFFER=buffer, LIMIT=limit)
-        msg = exec_command(c2, paramiko_mark, host, username, password)
+        msg = exec_command(c2, remote_ssh, host, username, password)
         return msg
     else:
         msg = 'ERROR', 'Must use netem parameters, such as delay, loss, duplicate, corrupt.'
     return msg
 
 
-def add_qdisc_traffic(eth, rate, buffer=1600, limit=3000, cidr=None, paramiko_mark=False, host=None, username=None, password=None, **kwargs):
+def add_qdisc_traffic(eth, rate, buffer=1600, limit=3000, cidr=None, remote_ssh=False, host=None, username=None, password=None, **kwargs):
     buffer = 1600 if buffer is None else buffer
     limit = 3000 if limit is None else limit
-    del_qdisc_root(eth, paramiko_mark, host, username, password)
+    del_qdisc_root(eth, remote_ssh, host, username, password)
     c1 = _tc_traffic_root.format(ETH=eth)
-    msg = exec_command(c1, paramiko_mark, host, username, password)
+    msg = exec_command(c1, remote_ssh, host, username, password)
     if msg[0] == 'ERROR':
         return msg
     c2 = _tc_traffic_rate.format(ETH=eth, RATE=rate, BUFFER=buffer, LIMIT=limit)
-    msg = exec_command(c2, paramiko_mark, host, username, password)
+    msg = exec_command(c2, remote_ssh, host, username, password)
     if msg[0] == 'ERROR':
         return msg
     if len(kwargs) != 0:
@@ -131,36 +138,36 @@ def add_qdisc_traffic(eth, rate, buffer=1600, limit=3000, cidr=None, paramiko_ma
             if kwargs[each]:
                 if kwargs[each].strip() != '':
                     c3 = ' '.join([c3, each, kwargs[each]])
-        msg = exec_command(c3, paramiko_mark, host, username, password)
+        msg = exec_command(c3, remote_ssh, host, username, password)
         if msg[0] == 'ERROR':
             return msg
     if cidr:
         c4 = _tc_traffic_filter_ip.format(ETH=eth, CIDR=cidr)
-        msg = exec_command(c4, paramiko_mark, host, username, password)
+        msg = exec_command(c4, remote_ssh, host, username, password)
         if msg[0] == 'ERROR':
             return msg
     return msg
 
 
-def brctl_addbr(stp='on', paramiko_mark=False, host=None, username=None, password=None):
-    exec_command(_brctl_delbr, paramiko_mark, host, username, password)
-    msg = exec_command(_brctl_addbr, paramiko_mark, host, username, password)
+def brctl_addbr(stp='on', remote_ssh=False, host=None, username=None, password=None):
+    exec_command(_brctl_delbr, remote_ssh, host, username, password)
+    msg = exec_command(_brctl_addbr, remote_ssh, host, username, password)
     if msg[0] == 'ERROR':
         return msg
-    msg = exec_command(_btctl_stp.format(STP=stp), paramiko_mark, host, username, password)
+    msg = exec_command(_btctl_stp.format(STP=stp), remote_ssh, host, username, password)
     return msg
 
 
-def brctl_addif(eth, paramiko_mark=False, host=None, username=None, password=None):
-    msg = exec_command(_brctl_addif.format(ETH=eth), paramiko_mark, host, username, password)
+def brctl_addif(eth, remote_ssh=False, host=None, username=None, password=None):
+    msg = exec_command(_brctl_addif.format(ETH=eth), remote_ssh, host, username, password)
     return msg
 
 
-def brctl_delbr(paramiko_mark=False, host=None, username=None, password=None):
-    msg = exec_command(_brctl_delbr, paramiko_mark, host, username, password)
+def brctl_delbr(remote_ssh=False, host=None, username=None, password=None):
+    msg = exec_command(_brctl_delbr, remote_ssh, host, username, password)
     return msg
 
 
-def brctl_delif(eth, paramiko_mark=False, host=None, username=None, password=None):
-    msg = exec_command(_brctl_delif.format(ETH=eth), paramiko_mark, host, username, password)
+def brctl_delif(eth, remote_ssh=False, host=None, username=None, password=None):
+    msg = exec_command(_brctl_delif.format(ETH=eth), remote_ssh, host, username, password)
     return msg

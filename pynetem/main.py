@@ -202,7 +202,7 @@ def main():
         sys.exit(1)
 
     eth = options.interface
-    paramiko_mark = False
+    remote_ssh = False
     _host = None
     _username = None
     _password = None
@@ -211,10 +211,10 @@ def main():
         _host = options.host
         _username = options.username
         _password = options.password
-        paramiko_mark = True
+        remote_ssh = True
 
     if options.clear:
-        del_qdisc_root(eth=eth, paramiko_mark=paramiko_mark, host=_host, username=_username, password=_password, )
+        del_qdisc_root(eth=eth, remote_ssh=remote_ssh, host=_host, username=_username, password=_password, )
         sys.exit(0)
 
     netem = dict()
@@ -250,7 +250,7 @@ def main():
         limit = options.limit if options.limit else 3000
         cidr = options.dst if options.dst else None
         if cidr:
-            msg = add_qdisc_traffic(eth=eth, rate=rate, buffer=buffer, limit=limit, cidr=cidr, paramiko_mark=paramiko_mark, host=_host, username=_username, password=_password, **netem)
+            msg = add_qdisc_traffic(eth=eth, rate=rate, buffer=buffer, limit=limit, cidr=cidr, remote_ssh=remote_ssh, host=_host, username=_username, password=_password, **netem)
             if msg[0] == 'ERROR':
                 logger.error(msg[1])
                 sys.exit(0)
@@ -258,7 +258,7 @@ def main():
                 logger.info(msg[1])
                 sys.exit(0)
         else:
-            msg = add_qdisc_rate_control(eth=eth, rate=rate, buffer=buffer, limit=limit, paramiko_mark=paramiko_mark, host=_host, username=_username, password=_password, **netem)
+            msg = add_qdisc_rate_control(eth=eth, rate=rate, buffer=buffer, limit=limit, remote_ssh=remote_ssh, host=_host, username=_username, password=_password, **netem)
             if msg[0] == 'ERROR':
                 logger.error(msg[1])
                 sys.exit(0)
@@ -266,7 +266,7 @@ def main():
                 logger.info(msg[1])
                 sys.exit(0)
     else:
-        msg = add_qdisc_root(eth=eth, paramiko_mark=paramiko_mark, host=_host, username=_username, password=_password, **netem)
+        msg = add_qdisc_root(eth=eth, remote_ssh=remote_ssh, host=_host, username=_username, password=_password, **netem)
         if msg[0] == 'ERROR':
             logger.error(msg[1])
             sys.exit(0)
