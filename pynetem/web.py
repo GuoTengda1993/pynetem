@@ -18,7 +18,7 @@ def tear_down():
 
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask('pynetem')
     app.root_path = os.path.dirname(os.path.abspath(__file__))
     app.register_blueprint(api, url_prefix='/pynetem')
     atexit.register(tear_down)
@@ -56,10 +56,10 @@ def clear():
     eth = request.args.get('eth')
     if not eth:
         status, msg = 'error', 'Miss parameter: eth'
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
     if eth not in interfaces:
         status, msg = 'error', '{} not in this host'.format(eth)
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
     del_qdisc_root(eth=eth)
     return jsonify({'status': 'success', 'msg': ''})
 
@@ -69,17 +69,17 @@ def get_rules():
     eth = request.args.get('eth')
     if not eth:
         status, msg = 'error', 'Miss parameter: eth'
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
     if eth not in interfaces:
         status, msg = 'error', '{} not in this host'.format(eth)
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
     resp = get_qdisc_ls(eth=eth)
     if resp[0] == 'ERROR':
-        status, msg = 'error', resp[1]
+        status, msg, code = 'error', resp[1], 210
     else:
-        status = 'success'
+        status, code = 'success', 200
         msg = resp[1].strip().split('\n')
-    return jsonify({'status': status, 'msg': msg})
+    return {'status': status, 'msg': msg}, code
 
 
 @api.route('/setRules', methods=['POST'])
@@ -87,12 +87,14 @@ def set_rules():
     eth = request.args.get('eth')
     if not eth:
         status, msg = 'error', 'Miss parameter: eth'
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
     if eth not in netifaces.interfaces():
         status, msg = 'error', '{} not in this host'.format(eth)
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
 
     data = request.json
+    if data is None:
+        return {'status': 'error', 'msg': 'The request body should be in JSON format.'}, 210
     delay = data.get('delay')
     distribution = data.get('distribution')
     reorder = data.get('reorder')
@@ -107,19 +109,19 @@ def set_rules():
 
     if distribution and not delay:
         status, msg = 'error', 'Cannot use distribution without delay'
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
     if distribution and len(delay.split(' ')) == 1:
         status, msg = 'error', 'distribution specified but no latency and jitter values'
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
     if distribution and distribution not in ['normal', 'pareto', 'paretonormal', '', None]:
         status, msg = 'error', 'distribution must be normal/pareto/paretonormal, or set it None'
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
     if reorder and not delay:
         status, msg = 'error', 'Cannot use reorder without delay'
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
     if not rate and (buffer or limit or cidr):
         status, msg = 'error', 'Cannot use buffer, limit or dst without rate'
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
 
     netem = dict()
     netem['delay'] = delay
@@ -131,33 +133,35 @@ def set_rules():
 
     if len(netem) == 0:
         status, msg = 'error', 'Must use netem parameters, such as delay, loss, duplicate, corrupt.'
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
 
     if rate:
         if cidr:
             resp = add_qdisc_traffic(eth=eth, rate=rate, buffer=buffer, limit=limit, cidr=cidr, **netem)
             if resp[0] == 'ERROR':
-                status, msg = 'error', resp[1]
+                status, msg, code = 'error', resp[1], 210
             else:
-                status, msg = 'success', resp[1]
+                status, msg, code = 'success', resp[1], 200
         else:
             resp = add_qdisc_rate_control(eth=eth, rate=rate, buffer=buffer, limit=limit, **netem)
             if resp[0] == 'ERROR':
-                status, msg = 'error', resp[1]
+                status, msg, code = 'error', resp[1], 210
             else:
-                status, msg = 'success', resp[1]
+                status, msg, code = 'success', resp[1], 200
     else:
         resp = add_qdisc_root(eth=eth, **netem)
         if resp[0] == 'ERROR':
-            status, msg = 'error', resp[1]
+            status, msg, code = 'error', resp[1], 210
         else:
-            status, msg = 'success', resp[1]
-    return jsonify({'status': status, 'msg': msg})
+            status, msg, code = 'success', resp[1], 200
+    return {'status': status, 'msg': msg}, code
 
 
 @api.route('/brctl/addbr', methods=['POST'])
 def add_bridge():
     data = request.json
+    if data is None:
+        return {'status': 'error', 'msg': 'The request body should be in JSON format.'}, 210
     eths = data.get('interfaces', [])
     stp = data.get('stp', 'on')
     _eth_mark = False
@@ -166,11 +170,11 @@ def add_bridge():
         for each in eths:
             if each not in interfaces:
                 status, msg = 'error', '{} is not exist in the host'.format(each)
-                return jsonify({'status': status, 'msg': msg})
+                return {'status': status, 'msg': msg}, 210
     resp = brctl_addbr(stp=stp)
     if resp[0] == 'ERROR':
         status, msg = 'error', resp[1]
-        return jsonify({'status': status, 'msg': msg})
+        return {'status': status, 'msg': msg}, 210
     res = dict()
     if _eth_mark:
         for each in eths:
@@ -188,13 +192,18 @@ def del_bridge():
 @api.route('/brctl/addif', methods=['POST'])
 def add_if_to_br():
     data = request.json
+    if data is None:
+        return {'status': 'error', 'msg': 'The request body should be in JSON format.'}, 210
     eths = data.get('interfaces', [])
-    if type(eths, list) and len(eths > 0):
+    if isinstance(eths, list) and len(eths) > 0:
         _eth_mark = True
         for each in eths:
             if each not in interfaces:
                 status, msg = 'error', '{} is not exist in the host'.format(each)
-                return jsonify({'status': status, 'msg': msg})
+                return {'status': status, 'msg': msg}, 210
+    else:
+        status, msg = 'error', 'interfaces is a list with eths, or missing parameter of interfaces in request body.'
+        return {'status': status, 'msg': msg}, 210
     res = dict()
     for each in eths:
         m = brctl_addif(eth=each)
