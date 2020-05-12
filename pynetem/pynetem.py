@@ -53,9 +53,9 @@ class SSHAgent:
         logger.info('Send command - {ip}: {command}'.format(ip=self.ip, command=command))
         error = stderr.read().decode('utf-8')
         if error:
-            return 'ERROR', error
+            return 'error', error
         else:
-            return 'SUCCESS', stdout.read().decode('utf-8')
+            return 'success', stdout.read().decode('utf-8')
 
 
 def exec_command(command, remote_ssh=False, host=None, username=None, password=None):
@@ -63,16 +63,16 @@ def exec_command(command, remote_ssh=False, host=None, username=None, password=N
         _exec = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         info, err = _exec.communicate()
         if err:
-            return 'ERROR', err.decode('utf-8')
+            return 'error', err.decode('utf-8')
         else:
-            return 'SUCCESS', info.decode('utf-8')
+            return 'success', info.decode('utf-8')
     else:
         try:
             ssh = SSHAgent(ip=host, username=username, password=password)
             with ssh:
                 output = ssh.remote_command(command)
         except SSHException as e:
-            output = 'ERROR', e
+            output = 'error', e
         return output
 
 
@@ -110,13 +110,13 @@ def add_qdisc_rate_control(eth, rate, buffer=1600, limit=3000, remote_ssh=False,
                 if kwargs[each].strip() != '':
                     c1 = ' '.join([c1, each, kwargs[each]])
         msg = exec_command(c1, remote_ssh, host, username, password)
-        if msg[0] == 'ERROR':
+        if msg[0] == 'error':
             return msg
         c2 = _tc_traffic_rate_control.format(ETH=eth, RATE=rate, BUFFER=buffer, LIMIT=limit)
         msg = exec_command(c2, remote_ssh, host, username, password)
         return msg
     else:
-        msg = 'ERROR', 'Must use netem parameters, such as delay, loss, duplicate, corrupt.'
+        msg = 'error', 'Must use netem parameters, such as delay, loss, duplicate, corrupt.'
     return msg
 
 
@@ -126,11 +126,11 @@ def add_qdisc_traffic(eth, rate, buffer=1600, limit=3000, cidr=None, remote_ssh=
     del_qdisc_root(eth, remote_ssh, host, username, password)
     c1 = _tc_traffic_root.format(ETH=eth)
     msg = exec_command(c1, remote_ssh, host, username, password)
-    if msg[0] == 'ERROR':
+    if msg[0] == 'error':
         return msg
     c2 = _tc_traffic_rate.format(ETH=eth, RATE=rate, BUFFER=buffer, LIMIT=limit)
     msg = exec_command(c2, remote_ssh, host, username, password)
-    if msg[0] == 'ERROR':
+    if msg[0] == 'error':
         return msg
     if len(kwargs) != 0:
         c3 = _tc_traffic_netem.format(ETH=eth)
@@ -139,12 +139,12 @@ def add_qdisc_traffic(eth, rate, buffer=1600, limit=3000, cidr=None, remote_ssh=
                 if kwargs[each].strip() != '':
                     c3 = ' '.join([c3, each, kwargs[each]])
         msg = exec_command(c3, remote_ssh, host, username, password)
-        if msg[0] == 'ERROR':
+        if msg[0] == 'error':
             return msg
     if cidr:
         c4 = _tc_traffic_filter_ip.format(ETH=eth, CIDR=cidr)
         msg = exec_command(c4, remote_ssh, host, username, password)
-        if msg[0] == 'ERROR':
+        if msg[0] == 'error':
             return msg
     return msg
 
@@ -152,7 +152,7 @@ def add_qdisc_traffic(eth, rate, buffer=1600, limit=3000, cidr=None, remote_ssh=
 def brctl_addbr(stp='on', remote_ssh=False, host=None, username=None, password=None):
     exec_command(_brctl_delbr, remote_ssh, host, username, password)
     msg = exec_command(_brctl_addbr, remote_ssh, host, username, password)
-    if msg[0] == 'ERROR':
+    if msg[0] == 'error':
         return msg
     msg = exec_command(_btctl_stp.format(STP=stp), remote_ssh, host, username, password)
     return msg

@@ -251,7 +251,7 @@ def main():
         cidr = options.dst if options.dst else None
         if cidr:
             msg = add_qdisc_traffic(eth=eth, rate=rate, buffer=buffer, limit=limit, cidr=cidr, remote_ssh=remote_ssh, host=_host, username=_username, password=_password, **netem)
-            if msg[0] == 'ERROR':
+            if msg[0] == 'error':
                 logger.error(msg[1])
                 sys.exit(0)
             else:
@@ -259,7 +259,7 @@ def main():
                 sys.exit(0)
         else:
             msg = add_qdisc_rate_control(eth=eth, rate=rate, buffer=buffer, limit=limit, remote_ssh=remote_ssh, host=_host, username=_username, password=_password, **netem)
-            if msg[0] == 'ERROR':
+            if msg[0] == 'error':
                 logger.error(msg[1])
                 sys.exit(0)
             else:
@@ -267,7 +267,7 @@ def main():
                 sys.exit(0)
     else:
         msg = add_qdisc_root(eth=eth, remote_ssh=remote_ssh, host=_host, username=_username, password=_password, **netem)
-        if msg[0] == 'ERROR':
+        if msg[0] == 'error':
             logger.error(msg[1])
             sys.exit(0)
         else:
