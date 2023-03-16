@@ -49,9 +49,10 @@ Format for the options is the same as [tc-netem](https://man7.org/linux/man-page
     "loss": "0.3% 25%",
     "duplicate": "1%",
     "corrupt": "0.1%",
-    # Rate control using Netem 
+    # Bitrate control using Netem 
     "netem_rate": "256kbit",
-    # Rate control using TBF
+    "netem_limit": 3000,
+    # Bitrate control using TBF
     "rate": "256kbit",
     "buffer": 1600,
     "limit": 3000,

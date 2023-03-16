@@ -60,6 +60,7 @@ def get_demo():
         'loss': '0.3% 25%',
         'duplicate': '1%',
         'corrupt': '0.1%',
+        'netem_limit': 3000,
         'rate': '256kbit',
         'buffer': 1600,
         'limit': 3000,
@@ -129,6 +130,7 @@ def set_rules():
     duplicate = data.get('duplicate')
     corrupt = data.get('corrupt')
     netem_rate = data.get('netem_rate')
+    netem_limit = data.get('netem_limit')
 
     rate = data.get('rate')
     buffer = data.get('buffer')
@@ -162,6 +164,7 @@ def set_rules():
     netem['duplicate'] = duplicate
     netem['corrupt'] = corrupt
     netem['rate'] = netem_rate
+    netem['limit'] = netem_limit
 
     if len(netem) == 0:
         status, msg = 'error', 'Must use netem parameters, such as delay, loss, duplicate, corrupt.'
