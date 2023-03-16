@@ -260,7 +260,7 @@ def main():
     if options.netem_rate:
         netem['rate'] = options.netem_rate
     if options.netem_limit:
-        netem['limit'] = options.netem_limit
+        netem['limit'] = str(options.netem_limit)
 
     if len(netem) == 0:
         logger.error('Must use netem parameters, such as delay, loss, duplicate, corrupt.')
