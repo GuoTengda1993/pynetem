@@ -17,7 +17,7 @@ If the host cannot download package from PyPI, you can use PyNetem (>=0.1.2) in 
 ```
 
 You can also use original command of `tc/netem`.
-For more information about `tc/netem`, you can click here: [netem](https://wiki.linuxfoundation.org/networking/netem)
+For more information about `tc/netem`, you can click here: [netem](https://man7.org/linux/man-pages/man8/tc-netem.8.html)
 
 It is recommended to use web mode, when you have several hosts to control, or you want to build a web page for easier usage.
 
@@ -37,8 +37,11 @@ There are 8 APIs:
 ```
 Post Body, if you set parameter `None` or `''`, the parameter will be ignored.
 
+Format for the options is the same as [tc-netem](https://man7.org/linux/man-pages/man8/tc-netem.8.html)'s and
+[tc-tbf](https://man7.org/linux/man-pages/man8/tc-tbf.8.html)'s.
+
 `[POST] /pynetem/setRules?eth=<interface name>`
-```json
+```python
 {
     "delay": "100ms 10ms 25%",
     "distribution": "normal",
@@ -46,12 +49,19 @@ Post Body, if you set parameter `None` or `''`, the parameter will be ignored.
     "loss": "0.3% 25%",
     "duplicate": "1%",
     "corrupt": "0.1%",
+    # Rate control using Netem 
+    "netem_rate": "256kbit",
+    # Rate control using TBF
     "rate": "256kbit",
     "buffer": 1600,
     "limit": 3000,
     "dst": "10.10.10.0/24"
 }
 ```
+`netem_rate` and `rate` are mutually exclusive.
+
+`buffer`, `limit`, and `dst` can only be used if `rate` is set.
+
 ---
 `[POST] /pynetem/brctl/addbr`
 

@@ -70,6 +70,13 @@ def parse_options():
     )
 
     parser.add_option(
+        '--netem-rate',
+        type='str',
+        dest='rate',
+        help="Use netem to limit trhoughput bitrate. For example: --netem-rate=256kbit",
+    )
+
+    parser.add_option(
         '--rate',
         type='str',
         dest='rate',
@@ -181,6 +188,10 @@ def main():
         logger.error('Cannot use "--reorder" without "-d"')
         sys.exit(1)
 
+    if options.rate and options.netem_rate:
+        logger.error('Cannot use "--rate" (TBF) and "--netem-rate" together')
+        sys.exit(1)
+
     if options.buffer and not options.rate:
         logger.error('Cannot use "--buffer" without "--rate"')
         sys.exit(1)
@@ -239,6 +250,8 @@ def main():
         netem['duplicate'] = options.duplicate
     if options.corrupt:
         netem['corrupt'] = options.corrupt
+    if options.netem_rate:
+        netem['rate'] = options.netem_rate
 
     if len(netem) == 0:
         logger.error('Must use netem parameters, such as delay, loss, duplicate, corrupt.')
