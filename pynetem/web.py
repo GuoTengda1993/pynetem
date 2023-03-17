@@ -164,7 +164,7 @@ def set_rules():
     netem['duplicate'] = duplicate
     netem['corrupt'] = corrupt
     netem['rate'] = netem_rate
-    netem['limit'] = str(netem_limit)
+    netem['limit'] = str(netem_limit) if netem_limit else None
 
     if len(netem) == 0:
         status, msg = 'error', 'Must use netem parameters, such as delay, loss, duplicate, corrupt.'
