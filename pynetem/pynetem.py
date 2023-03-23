@@ -59,8 +59,12 @@ class SSHAgent:
 
 
 def exec_command(command, remote_ssh=False, host=None, username=None, password=None):
+    bad_chars = ["&", "|", ";", "$", ">", "<", "`", "\\", "!"]
+    if any([char in command for char in bad_chars]):
+        return 'error', 'Illegal characters in command that may result in arbitrary execution'
+
     if not remote_ssh:
-        _exec = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        _exec = subprocess.Popen(command.split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         info, err = _exec.communicate()
         if err:
             return 'error', err.decode('utf-8')
