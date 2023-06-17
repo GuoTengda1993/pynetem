@@ -37,7 +37,7 @@ setup(
     keywords='',
     author='Guo Tengda',
     author_email='ttguotengda@foxmail.com',
-    url='',
+    url='https://github.com/GuoTengda1993/pynetem',
     license='MIT',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     include_package_data=True,

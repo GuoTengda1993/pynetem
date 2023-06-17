@@ -60,12 +60,17 @@ def get_demo():
         'loss': '0.3% 25%',
         'duplicate': '1%',
         'corrupt': '0.1%',
+        'netem_limit': 3000,
         'rate': '256kbit',
         'buffer': 1600,
         'limit': 3000,
         'dst': '10.10.10.0/24',
-        'description': 'This demo is just for API: [POST] /pynetem/setRules?eth=eth0.  '
-                       'If you set parameter None or \'\', the parameter will be ignored.',
+        'description':
+            'This demo is just for API: [POST] /pynetem/setRules?eth=eth0.  '
+            'If you set parameter None or \'\', the parameter will be ignored.  '
+            '"netem_rate" can also be used to control bandwidth (instead of "rate" that uses TBF).  '
+            'Format for the options can be found here: https://man7.org/linux/man-pages/man8/tc-netem.8.html.  '
+            'And for TBF rate options: https://man7.org/linux/man-pages/man8/tc-tbf.8.html',
         'otherAPIs': ['[GET/DELETE] /pynetem/clear?eth=eth0 -- clear all rules',
                       '[GET] /pynetem/listInterfaces -- list all interfaces of host']
     }
@@ -124,6 +129,8 @@ def set_rules():
     loss = data.get('loss')
     duplicate = data.get('duplicate')
     corrupt = data.get('corrupt')
+    netem_rate = data.get('netem_rate')
+    netem_limit = data.get('netem_limit')
 
     rate = data.get('rate')
     buffer = data.get('buffer')
@@ -142,6 +149,9 @@ def set_rules():
     if reorder and not delay:
         status, msg = 'error', 'Cannot use reorder without delay'
         return status, msg, 210
+    if rate and netem_rate:
+        status, msg = 'error', 'Cannot use rate (TBF) and netem_rate together'
+        return status, msg, 210
     if not rate and (buffer or limit or cidr):
         status, msg = 'error', 'Cannot use buffer, limit or dst without rate'
         return status, msg, 210
@@ -153,6 +163,8 @@ def set_rules():
     netem['loss'] = loss
     netem['duplicate'] = duplicate
     netem['corrupt'] = corrupt
+    netem['rate'] = netem_rate
+    netem['limit'] = str(netem_limit) if netem_limit else None
 
     if len(netem) == 0:
         status, msg = 'error', 'Must use netem parameters, such as delay, loss, duplicate, corrupt.'
